@@ -1,6 +1,2 @@
-{
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index" },
-    { "source": "/(.*)", "destination": "/api/index" }
-  ]
-}
+mFlask==2.3.3
+requests==2.31.0
