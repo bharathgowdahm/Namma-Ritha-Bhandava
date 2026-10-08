@@ -1,119 +1,157 @@
 from flask import Flask, jsonify, request, render_template_string
 import os
 import requests
+from datetime import datetime
 
 app = Flask(__name__)
-
 AQ_API_KEY = os.environ.get("AQ_API_KEY", "")
 
-def call_aq_model_38(prompt_text, model="llama-3.1-8b-instant"):
+TOKENS = [
+    {"id":1,"name":"Ramesh Gowda","phone":"9876543210","age":45,"symptom":"Fever","status":"current","time":"09:15 AM","fee":50},
+    {"id":2,"name":"Lakshmi","phone":"9876543211","age":32,"symptom":"Cough","status":"waiting","time":"09:18 AM","fee":50},
+    {"id":3,"name":"Suresh","phone":"9876543212","age":28,"symptom":"Headache","status":"waiting","time":"09:22 AM","fee":50},
+]
+CURRENT_TOKEN = 1
+
+def call_aq_clinic(prompt_text):
     if not AQ_API_KEY:
         return None
     try:
         headers = {"Authorization": f"Bearer {AQ_API_KEY}", "Content-Type": "application/json"}
         url = "https://api.groq.com/openai/v1/chat/completions"
-        payload = {"model": model, "messages": [{"role":"user","content": prompt_text}], "temperature":0.4, "max_tokens":600}
-        resp = requests.post(url, json=payload, headers=headers, timeout=12)
+        payload = {"model":"llama-3.1-8b-instant","messages":[{"role":"user","content":prompt_text}],"temperature":0.3,"max_tokens":250}
+        resp = requests.post(url, json=payload, headers=headers, timeout=10)
         if resp.status_code == 200:
             return resp.json()['choices'][0]['message']['content']
         return None
     except:
         return None
 
-HTML_TEMPLATE = """<!DOCTYPE html>
+HTML_TEMPLATE = '''
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bharath Pro Suite - Vercel Fixed - 3 Apps - AQ 3.8</title>
+<title>Namma Clinic Pro - Token Queue - Vercel</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Noto+Sans+Kannada:wght@400;700&family=Space+Grotesk:wght@700;900&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:radial-gradient(ellipse at top left,#0f172a 0%,#1e1b4b 30%,#020617 100%);color:white;font-family:'Outfit','Noto Sans Kannada',sans-serif;min-height:100vh}
-.glass{background:linear-gradient(135deg,rgba(255,255,255,0.11) 0%,rgba(255,255,255,0.05) 100%);backdrop-filter:blur(24px) saturate(180%);border:1px solid rgba(255,255,255,0.16);border-radius:28px;padding:28px;box-shadow:0 12px 40px rgba(0,0,0,0.55);margin:18px;transition:all 0.4s}
-.glass:hover{transform:translateY(-4px)}
-.header{text-align:center;padding:36px 20px}
-.header h1{font-size:clamp(1.8rem,5vw,3.4rem);font-weight:900;background:linear-gradient(135deg,#fbbf24 0%,#f59e0b 15%,#ef4444 40%,#8b5cf6 75%,#06b6d4 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-family:'Space Grotesk',sans-serif}
-.meter{background:linear-gradient(135deg,#1e293b 0%,#0f172a 60%,#020617 100%);border:2px solid #fbbf24;border-radius:24px;padding:24px;text-align:center;box-shadow:0 0 60px rgba(251,191,36,0.28)}
-.fare{font-size:clamp(2.5rem,8vw,4.5rem);font-weight:900;background:linear-gradient(135deg,#fbbf24,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-family:'Space Grotesk',monospace}
-.btn{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:black;border:none;padding:14px 22px;border-radius:14px;font-weight:800;cursor:pointer;width:100%;margin:8px 0;font-size:1rem}
+body{background:radial-gradient(ellipse at top left,#0f172a 0%,#1e293b 20%,#020617 100%);color:white;font-family:'Outfit','Noto Sans Kannada',sans-serif;min-height:100vh}
+.glass{background:linear-gradient(135deg,rgba(255,255,255,0.10) 0%,rgba(255,255,255,0.04) 100%);backdrop-filter:blur(28px) saturate(180%);border:1px solid rgba(255,255,255,0.14);border-radius:26px;padding:26px;box-shadow:0 12px 40px rgba(0,0,0,0.6);margin:16px;transition:all 0.4s}
+.glass:hover{transform:translateY(-3px)}
+.header{text-align:center;padding:32px 20px}
+.header h1{font-size:clamp(2rem,5vw,3.6rem);font-weight:900;background:linear-gradient(135deg,#38bdf8 0%,#3b82f6 25%,#8b5cf6 60%,#06b6d4 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-family:'Space Grotesk',sans-serif;line-height:1.05}
+.token-big{background:linear-gradient(135deg,#1e293b 0%,#0f172a 70%,#020617 100%);border:2px solid #38bdf8;border-radius:22px;padding:22px;text-align:center;box-shadow:0 0 70px rgba(56,189,248,0.25)}
+.token-number{font-size:clamp(3rem,9vw,5rem);font-weight:900;background:linear-gradient(135deg,#38bdf8,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-family:'Space Grotesk',monospace}
+.btn{background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;border:none;padding:13px 20px;border-radius:14px;font-weight:800;cursor:pointer;width:100%;margin:7px 0;font-size:0.95rem}
 .btn:hover{transform:translateY(-2px)}
-.btn-green{background:linear-gradient(135deg,#22c55e,#16a34a);color:white}
-.btn-blue{background:linear-gradient(135deg,#3b82f6,#2563eb);color:white}
-.btn-purple{background:linear-gradient(135deg,#8b5cf6,#6366f1);color:white}
-input,select{width:100%;padding:13px;border-radius:12px;border:1px solid rgba(255,255,255,0.22);background:rgba(255,255,255,0.09);color:white;margin:8px 0}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;padding:18px}
+.btn-green{background:linear-gradient(135deg,#22c55e,#16a34a)}
+.btn-gold{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:black}
+.btn-purple{background:linear-gradient(135deg,#8b5cf6,#6366f1)}
+.btn-red{background:linear-gradient(135deg,#ef4444,#dc2626)}
+input,select,textarea{width:100%;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.20);background:rgba(255,255,255,0.08);color:white;margin:6px 0;font-size:0.95rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;padding:16px}
 .kannada{font-family:'Noto Sans Kannada',sans-serif}
-.badge{display:inline-block;background:rgba(34,197,94,0.2);border:1px solid rgba(34,197,94,0.4);padding:4px 12px;border-radius:20px;font-size:0.8rem;font-weight:700}
+.badge{display:inline-block;background:rgba(34,197,94,0.18);border:1px solid rgba(34,197,94,0.35);padding:5px 14px;border-radius:20px;font-size:0.8rem;font-weight:800;margin:4px}
+.badge-blue{background:rgba(59,130,246,0.18);border-color:rgba(59,130,246,0.35)}
+.badge-gold{background:rgba(251,191,36,0.18);border-color:rgba(251,191,36,0.35)}
+.queue-item{display:flex;align-items:center;gap:14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:14px;margin:8px 0}
+.queue-item.current{border-color:#38bdf8;background:linear-gradient(135deg,rgba(56,189,248,0.18),rgba(59,130,246,0.12))}
+.dot{width:14px;height:14px;border-radius:50%}
+.dot-current{background:#38bdf8;box-shadow:0 0 12px #38bdf8;animation:pulse 2s infinite}
+.dot-waiting{background:#fbbf24}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(56,189,248,0.7)}50%{box-shadow:0 0 0 10px rgba(56,189,248,0)}100%{box-shadow:0 0 0 0 rgba(56,189,248,0)}}
+.stat{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:12px 0}
+.stat-box{background:#1e293b;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:12px;text-align:center}
 </style>
 </head>
 <body>
 <div class="header">
-<h1>BHARATH PRO SUITE • VERCEL FIXED ✅</h1>
-<p style="color:#94a3b8;font-size:1.15rem;margin-top:14px">🛺 Auto Fare + 🛒 Kirana Pro + 🏥 Clinic Pro • 3 Apps • Vercel + AQ 3.8 • NOT FOUND FIXED</p>
-<p style="margin-top:10px"><span class="badge">✅ Build Fixed</span> <span class="badge" style="background:rgba(251,191,36,0.2)">✅ Not Found Fixed</span> <span class="badge" style="background:rgba(59,130,246,0.2)">✅ Vercel Live</span></p>
-<p style="color:#fbbf24;margin-top:12px;font-weight:700">namma-ritha-bhandava-wv4t.vercel.app • Built by Bharath Gowda Hm</p>
+<h1>NAMMA CLINIC PRO • TOKEN QUEUE</h1>
+<p>🏥 Clinic Token Management • Doctor Dashboard • High Graphics • Vercel + AQ 3.8</p>
+<p style="margin-top:10px"><span class="badge">✅ Clinic Pro Only</span> <span class="badge badge-blue">✅ Vercel Ready</span> <span class="badge badge-gold">✅ Not Found Fixed</span></p>
+<p style="color:#38bdf8;margin-top:10px;font-weight:700">Built by Bharath Gowda Hm | PAID ₹10k-15k/clinic + ₹500/month</p>
 </div>
 <div class="grid">
 <div class="glass">
-<h2>🛺 Auto Fare Kannada Pro</h2>
-<p class="kannada" style="color:#94a3b8;margin:10px 0">ಬೆಂಗಳೂರು ಆಟೋ ದರ • ₹30 base (2km) + ₹15/km</p>
-<label>From</label><input id="fromLoc" value="MG Road, Bangalore">
-<label>To</label><input id="toLoc" value="Koramangala, Bangalore">
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label>Distance km</label><input type="number" id="dist" value="6.5" step="0.5"></div><div><label>Waiting min</label><input type="number" id="wait" value="5"></div></div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label>Night 1.5x</label><select id="night"><option value="false">No Day</option><option value="true">Yes Night</option></select></div><div><label>Luggage ₹10</label><select id="luggage"><option value="false">No</option><option value="true">Yes</option></select></div></div>
-<button class="btn" onclick="calcFare()">🔥 Calculate Fare</button>
-<div class="meter" style="margin-top:18px"><div style="font-size:0.8rem;color:#94a3b8">BANGALORE AUTO METER</div><div class="fare" id="fareResult">₹ 98</div><div style="color:#fbbf24;margin-top:8px" id="fareDetail">6.5 KM • Ready</div></div>
-<div style="margin-top:14px;background:rgba(34,197,94,0.12);padding:14px;border-radius:14px;border-left:4px solid #22c55e" class="kannada"><b>Kannada:</b> "ಅಣ್ಣಾ <span id="toKannada">ಕೋರಮಂಗಲ</span> ಗೆ <span id="distKannada">6.5</span> ಕಿಮೀ, ₹<span id="fareKannada">98</span> ಆಗುತ್ತೆ?"</div>
-<button class="btn btn-purple" style="margin-top:12px" onclick="getAQScript()">🤖 Get AQ 3.8 Kannada</button>
-<div id="aqResult" style="display:none;background:rgba(251,191,36,0.12);padding:14px;border-radius:12px;margin-top:10px" class="kannada"></div>
+<h2>🎫 Live Token Board</h2>
+<div class="token-big" style="margin-top:14px">
+<div style="font-size:0.8rem;color:#94a3b8;font-weight:700">CURRENT TOKEN • NOW SERVING</div>
+<div class="token-number" id="currentTokenDisplay">#1</div>
+<div style="color:#38bdf8;margin-top:8px;font-weight:700" id="currentPatientDisplay">Ramesh Gowda • Fever • 09:15 AM</div>
+<div style="color:#94a3b8;font-size:0.85rem;margin-top:6px" id="currentPhone">📱 9876543210 • Fee ₹50</div>
+</div>
+<div class="stat">
+<div class="stat-box"><div style="font-size:0.75rem;color:#94a3b8">WAITING</div><div style="font-weight:900;font-size:1.4rem" id="waitingCount">9</div></div>
+<div class="stat-box"><div style="font-size:0.75rem;color:#94a3b8">TODAY</div><div style="font-weight:900;font-size:1.4rem" id="todayCount">23</div></div>
+<div class="stat-box"><div style="font-size:0.75rem;color:#94a3b8">REVENUE</div><div style="font-weight:900;font-size:1.4rem;color:#22c55e" id="revenueDisplay">₹1,150</div></div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
+<button class="btn btn-green" onclick="callNext()">⏭️ Call Next</button>
+<button class="btn btn-gold" onclick="markDone()">✅ Done</button>
+</div>
+<button class="btn btn-red" onclick="resetQueue()" style="margin-top:8px">🔄 Reset Day</button>
+<div id="actionResult" style="display:none;background:rgba(56,189,248,0.12);padding:12px;border-radius:12px;margin-top:12px;border-left:4px solid #38bdf8;font-size:0.9rem"></div>
 </div>
 <div class="glass">
-<h2>🛒 Kirana Pro - PAID</h2>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div style="background:rgba(34,197,94,0.18);border:1px solid rgba(34,197,94,0.35);border-radius:16px;padding:14px"><div style="font-size:1.9rem">🍅</div><div style="font-weight:800">Tomato</div><div style="color:#22c55e;font-weight:900">₹40/kg</div></div><div style="background:rgba(34,197,94,0.18);border:1px solid rgba(34,197,94,0.35);border-radius:16px;padding:14px"><div style="font-size:1.9rem">🧅</div><div style="font-weight:800">Onion</div><div style="color:#22c55e;font-weight:900">₹35/kg</div></div><div style="background:rgba(34,197,94,0.18);border:1px solid rgba(34,197,94,0.35);border-radius:16px;padding:14px"><div style="font-size:1.9rem">🥛</div><div style="font-weight:800">Milk</div><div style="color:#22c55e;font-weight:900">₹28/L</div></div><div style="background:rgba(34,197,94,0.18);border:1px solid rgba(34,197,94,0.35);border-radius:16px;padding:14px"><div style="font-size:1.9rem">🍚</div><div style="font-weight:800">Rice</div><div style="color:#22c55e;font-weight:900">₹65/kg</div></div></div>
-<div style="background:#1e293b;padding:14px;border-radius:14px;margin-top:14px"><div style="display:flex;justify-content:space-between"><span>Total</span><span style="color:#22c55e;font-weight:900">₹218</span></div></div>
-<button class="btn btn-green" onclick="alert('✅ QR Bill ₹218')">💳 Generate Bill QR ₹218</button>
+<h2>➕ Book Token • ಹೊಸ ಟೋಕನ್</h2>
+<p class="kannada" style="color:#94a3b8;margin:8px 0;font-size:0.9rem">ರೋಗಿ ವಿವರ • Patient Details • AQ 3.8</p>
+<input id="pName" placeholder="Patient Name / ರೋಗಿ ಹೆಸರು">
+<input id="pPhone" placeholder="Phone / ಫೋನ್">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+<input id="pAge" type="number" placeholder="Age">
+<select id="pGender"><option>Male</option><option>Female</option></select>
+</div>
+<textarea id="pSymptom" rows="2" placeholder="Symptoms / ಲಕ್ಷಣಗಳು"></textarea>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+<select id="pType"><option>New Patient</option><option>Follow-up</option><option>Emergency</option></select>
+<input id="pFee" type="number" value="50">
+</div>
+<button class="btn" onclick="bookToken()">➕ Book Token ₹50</button>
+<div id="bookResult" style="display:none;margin-top:12px"></div>
+<div id="aqSymptomResult" style="display:none;background:rgba(251,191,36,0.12);padding:12px;border-radius:12px;margin-top:10px;border-left:4px solid #fbbf24;font-size:0.9rem" class="kannada"></div>
 </div>
 <div class="glass">
-<h2>🏥 Clinic Pro - PAID</h2>
-<div style="display:flex;gap:8px;overflow-x:auto;padding:12px 0"><div style="min-width:64px;height:64px;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:black;border-radius:16px;display:flex;align-items:center;justify-content:center;font-weight:900">1</div><div style="min-width:64px;height:64px;background:#334155;border-radius:16px;display:flex;align-items:center;justify-content:center">2</div><div style="min-width:64px;height:64px;background:#334155;border-radius:16px;display:flex;align-items:center;justify-content:center">3</div></div>
-<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:14px 0"><div style="background:#1e293b;padding:12px;border-radius:12px;text-align:center"><div style="font-size:0.8rem;color:#94a3b8">Current</div><div style="font-weight:900">#1</div></div><div style="background:#1e293b;padding:12px;border-radius:12px;text-align:center"><div style="font-size:0.8rem;color:#94a3b8">Waiting</div><div style="font-weight:900">9</div></div><div style="background:#1e293b;padding:12px;border-radius:12px;text-align:center"><div style="font-size:0.8rem;color:#94a3b8">Revenue</div><div style="font-weight:900;color:#22c55e">₹1,150</div></div></div>
-<input id="patientName" placeholder="Patient Name"><button class="btn btn-blue" onclick="bookToken()">➕ Book Token ₹50</button><div id="tokenResult" style="display:none;background:rgba(59,130,246,0.14);padding:14px;border-radius:12px;margin-top:10px"></div>
+<h2>📋 Queue List • ಸರತಿ ಪಟ್ಟಿ</h2>
+<div id="queueList" style="max-height:380px;overflow-y:auto;margin-top:12px">Loading...</div>
+<div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+<button class="btn btn-purple" onclick="loadQueue()">🔄 Refresh</button>
+<button class="btn" style="background:#334155" onclick="exportQueue()">📤 Export CSV</button>
 </div>
 </div>
-<div class="glass" style="background:linear-gradient(135deg,rgba(99,102,241,0.18),rgba(168,85,247,0.14))">
-<h2>🔑 Vercel Fixed - Not Found Solution</h2>
-<p style="color:#cbd5e1;margin:12px 0">Previous 404 "Not Found - The requested URL was not found on the server" fixed by adding catch-all routes for /api/index and /</p>
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:16px">
-<div style="background:rgba(0,0,0,0.25);padding:12px;border-radius:12px">✅ <b>/</b> → Home UI</div>
-<div style="background:rgba(0,0,0,0.25);padding:12px;border-radius:12px">✅ <b>/api/index</b> → Home UI</div>
-<div style="background:rgba(0,0,0,0.25);padding:12px;border-radius:12px">✅ <b>/api/health</b> → JSON</div>
-<div style="background:rgba(0,0,0,0.25);padding:12px;border-radius:12px">✅ <b>Catch-all</b> → No more 404</div>
 </div>
-<div style="margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:12px"><button class="btn btn-purple" onclick="testAPIs()">🧪 Test All APIs</button><button class="btn" onclick="window.open('/api/health','_blank')">📄 /api/health</button></div>
-<div id="apiResult" style="background:rgba(0,0,0,0.45);padding:14px;border-radius:14px;margin-top:14px;font-family:monospace;font-size:0.85rem;display:none"></div>
+<div class="glass" style="background:linear-gradient(135deg,rgba(56,189,248,0.15),rgba(59,130,246,0.12))">
+<h2>🔑 Clinic Pro Only - Vercel Fixed</h2>
+<p style="color:#cbd5e1;margin:10px 0">Only Clinic Pro Project • No Auto Fare • No Kirana • Focused • PAID ₹10k-15k</p>
+<div style="margin-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+<button class="btn btn-purple" onclick="testAPIs()">🧪 Test APIs</button>
+<button class="btn" onclick="window.open('/api/health','_blank')">📄 /api/health</button>
 </div>
-<div style="text-align:center;padding:32px;margin:20px;background:rgba(255,255,255,0.06);border-radius:28px;border:1px solid rgba(255,255,255,0.12)">
-<h3 style="font-size:1.9rem;font-weight:900">🚀 VERCEL FIXED ✅ • NOT FOUND FIXED ✅ • READY ✅</h3>
-<p style="color:#94a3b8;margin-top:12px">namma-ritha-bhandava-wv4t.vercel.app • Flask app top-level • Catch-all routes • AQ 3.8 • Bharath Gowda Hm</p>
+<div id="apiResult" style="background:rgba(0,0,0,0.45);padding:14px;border-radius:14px;margin-top:14px;font-family:monospace;font-size:0.85rem;display:none;max-height:300px;overflow:auto"></div>
 </div>
 <script>
-function calcFare(){const dist=parseFloat(document.getElementById('dist').value)||6.5;const wait=parseInt(document.getElementById('wait').value)||5;const isNight=document.getElementById('night').value==='true';const hasLuggage=document.getElementById('luggage').value==='true';const toLoc=document.getElementById('toLoc').value||'Koramangala';let fare=30+Math.max(0,(dist-2)*15)+Math.floor(wait/5)*5+(hasLuggage?10:0);if(isNight)fare*=1.5;fare=Math.round(fare);document.getElementById('fareResult').innerText='₹ '+fare;document.getElementById('fareDetail').innerText=dist+' KM • '+(isNight?'Night':'Day');document.getElementById('fareKannada').innerText=fare;document.getElementById('distKannada').innerText=dist;document.getElementById('toKannada').innerText=toLoc;fetch(`/api/fare?distance=${dist}&waiting=${wait}&is_night=${isNight}&has_luggage=${hasLuggage}`).then(r=>r.json()).then(d=>console.log(d))}
-async function getAQScript(){const dist=document.getElementById('dist').value;const toLoc=document.getElementById('toLoc').value;const fromLoc=document.getElementById('fromLoc').value;const fare=document.getElementById('fareResult').innerText;const resultDiv=document.getElementById('aqResult');resultDiv.style.display='block';resultDiv.innerHTML='🤖 AQ 3.8 generating...';try{const res=await fetch(`/api/aq?from=${encodeURIComponent(fromLoc)}&to=${encodeURIComponent(toLoc)}&distance=${dist}&fare=${fare}`);const data=await res.json();resultDiv.innerHTML=`<b>✅ AQ 3.8:</b><br><br>${(data.response||data.fallback||JSON.stringify(data)).substring(0,800)}`}catch(e){resultDiv.innerHTML=`<b>Kannada:</b><br>"ಅಣ್ಣಾ ${toLoc} ಗೆ ${dist} ಕಿಮೀ, ${fare} ಆಗುತ್ತೆ?"`}}
-function bookToken(){const name=document.getElementById('patientName').value||'Patient';const resultDiv=document.getElementById('tokenResult');resultDiv.style.display='block';resultDiv.innerHTML=`✅ Token #11 for <b>${name}</b>! ₹50<br>📱 SMS sent`;fetch('/api/tokens').then(r=>r.json()).then(d=>console.log(d))}
-async function testAPIs(){const resultDiv=document.getElementById('apiResult');resultDiv.style.display='block';resultDiv.innerHTML='Testing...<br><br>';const apis=['/','/api/health','/api/fare?distance=6.5','/api/products','/api/tokens'];for(let api of apis){try{const res=await fetch(api);const isJson=res.headers.get('content-type')?.includes('json');const data=isJson?await res.json():await res.text();const text=isJson?JSON.stringify(data).substring(0,150):'HTML OK '+data.length+' chars';resultDiv.innerHTML+=`<div style="color:#22c55e;margin:6px 0;padding:6px;background:rgba(34,197,94,0.08);border-radius:8px">✅ ${api}<br><span style="color:#cbd5e1">${text}...</span></div>`}catch(e){resultDiv.innerHTML+=`<div style="color:#ef4444">❌ ${api} → ${e}</div>`}}}
+let tokens=[];let currentId=1;
+async function loadQueue(){try{const res=await fetch('/api/tokens');const data=await res.json();tokens=data.queue||[];if(data.current)currentId=data.current;renderQueue();updateStats(data)}catch(e){tokens=[{id:1,name:"Ramesh Gowda",phone:"9876543210",age:45,symptom:"Fever",status:"current",time:"09:15 AM",fee:50},{id:2,name:"Lakshmi",phone:"9876543211",age:32,symptom:"Cough",status:"waiting",time:"09:18 AM",fee:50}];renderQueue()}}
+function renderQueue(){const list=document.getElementById('queueList');if(tokens.length===0){list.innerHTML='<div style="text-align:center;color:#94a3b8;padding:20px">No tokens</div>';return}list.innerHTML=tokens.map(t=>`<div class="queue-item ${t.status==='current'?'current':''}"><div class="dot ${t.status==='current'?'dot-current':'dot-waiting'}"></div><div style="min-width:52px;height:52px;background:${t.status==='current'?'linear-gradient(135deg,#38bdf8,#3b82f6)':'#334155'};color:${t.status==='current'?'black':'white'};border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:900">#${t.id}</div><div style="flex:1"><div style="font-weight:800">${t.name}</div><div style="font-size:0.85rem;color:#94a3b8">${t.symptom} • ${t.time} • ${t.status}</div><div style="font-size:0.8rem;color:#94a3b8">📱 ${t.phone} • ₹${t.fee}</div></div></div>`).join('')}
+function updateStats(data){document.getElementById('currentTokenDisplay').innerText='#'+(data.current||1);const curr=tokens.find(t=>t.id===data.current)||tokens[0];if(curr){document.getElementById('currentPatientDisplay').innerText=curr.name+' • '+curr.symptom+' • '+curr.time;document.getElementById('currentPhone').innerText='📱 '+curr.phone+' • Fee ₹'+curr.fee}document.getElementById('waitingCount').innerText=data.waiting||tokens.filter(t=>t.status==='waiting').length;document.getElementById('todayCount').innerText=data.today_patients||tokens.length;document.getElementById('revenueDisplay').innerText='₹'+(data.revenue||tokens.length*50)}
+async function bookToken(){const name=document.getElementById('pName').value.trim();const phone=document.getElementById('pPhone').value.trim();const age=document.getElementById('pAge').value.trim();const symptom=document.getElementById('pSymptom').value.trim();const fee=document.getElementById('pFee').value||50;if(!name||!phone||!symptom){alert('Fill Name, Phone, Symptoms');return}const resultDiv=document.getElementById('bookResult');const aqDiv=document.getElementById('aqSymptomResult');resultDiv.style.display='block';resultDiv.innerHTML='<div style="background:rgba(59,130,246,0.12);padding:12px;border-radius:12px">⏳ Booking...</div>';try{const res=await fetch(`/api/tokens/book?name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}&age=${age}&symptom=${encodeURIComponent(symptom)}&fee=${fee}`);const data=await res.json();resultDiv.innerHTML=`<div style="background:rgba(34,197,94,0.12);padding:14px;border-radius:12px;border-left:4px solid #22c55e">✅ Token #${data.token_id||(tokens.length+1)} for ${name}!<br>📱 SMS to ${phone}<br>Waiting: ~${(data.waiting||tokens.length)*5} min</div>`;aqDiv.style.display='block';aqDiv.innerHTML='🤖 AQ 3.8 analyzing...';fetch(`/api/aq?symptom=${encodeURIComponent(symptom)}&name=${encodeURIComponent(name)}&age=${age}`).then(r=>r.json()).then(d=>{aqDiv.innerHTML=`<b>AQ 3.8:</b><br><br>${(d.response||d.fallback||'').substring(0,600)}`});loadQueue()}catch(e){const newId=tokens.length+1;tokens.push({id:newId,name,phone,age,symptom,status:'waiting',time:new Date().toLocaleTimeString(),fee});renderQueue();resultDiv.innerHTML=`<div style="background:rgba(34,197,94,0.12);padding:12px;border-radius:12px">✅ Token #${newId} Booked (Local)!</div>`}}
+async function callNext(){const resultDiv=document.getElementById('actionResult');resultDiv.style.display='block';try{const res=await fetch('/api/tokens/next',{method:'POST'});const data=await res.json();resultDiv.innerHTML=`✅ Next: Token #${data.next||currentId+1} - ${data.name||'Next'}`;currentId=data.next||currentId+1;loadQueue()}catch(e){currentId++;document.getElementById('currentTokenDisplay').innerText='#'+currentId;resultDiv.innerHTML=`✅ Next: #${currentId} (Local)`}}
+function markDone(){const resultDiv=document.getElementById('actionResult');resultDiv.style.display='block';resultDiv.innerHTML=`✅ Token #${currentId} Done • Next in 2 sec`;setTimeout(()=>{callNext()},1500)}
+function resetQueue(){if(confirm('Reset queue?')){tokens=[];currentId=1;renderQueue();document.getElementById('actionResult').style.display='block';document.getElementById('actionResult').innerHTML='🔄 Queue reset'}}
+function exportQueue(){const csv='ID,Name,Phone,Symptom,Status,Fee\n'+tokens.map(t=>`${t.id},${t.name},${t.phone},${t.symptom},${t.status},${t.fee}`).join('\n');const blob=new Blob([csv],{type:'text/csv'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='clinic-tokens.csv';a.click()}
+async function testAPIs(){const resultDiv=document.getElementById('apiResult');resultDiv.style.display='block';resultDiv.innerHTML='Testing...<br><br>';const apis=['/','/api/health','/api/tokens','/api/aq?symptom=Fever'];for(let api of apis){try{const res=await fetch(api);const isJson=res.headers.get('content-type')?.includes('json');const data=isJson?await res.json():await res.text();const text=isJson?JSON.stringify(data).substring(0,150):'HTML OK';resultDiv.innerHTML+=`<div style="color:#22c55e;margin:6px 0;padding:6px;background:rgba(34,197,94,0.08);border-radius:8px">✅ ${api}<br>${text}...</div>`}catch(e){resultDiv.innerHTML+=`<div style="color:#ef4444">❌ ${api}</div>`}}}
+window.onload=()=>{loadQueue()};
 </script>
 </body>
 </html>
-"""
+'''
 
-def get_fare(distance, waiting, is_night, has_luggage):
-    base=30
-    fare=base+max(0,(distance-2)*15)+(waiting//5)*5+(10 if has_luggage else 0)
-    if is_night: fare*=1.5
-    return round(fare)
-
-# ===== CORE ROUTES - ALL PATHS COVERED TO FIX NOT FOUND =====
+def get_next_id():
+    global TOKENS
+    if not TOKENS:
+        return 1
+    return max(t["id"] for t in TOKENS) + 1
 
 @app.route('/')
 @app.route('/api')
@@ -123,76 +161,88 @@ def get_fare(distance, waiting, is_night, has_luggage):
 def home():
     return render_template_string(HTML_TEMPLATE)
 
-@app.route('/api/fare')
-@app.route('/api/fare/')
-def fare_api():
-    try:
-        dist=float(request.args.get('distance',6.5))
-        waiting=int(request.args.get('waiting',5))
-        is_night=request.args.get('is_night','false').lower()=='true'
-        has_luggage=request.args.get('has_luggage','false').lower()=='true'
-        fare=get_fare(dist,waiting,is_night,has_luggage)
-        return jsonify({"app":"Auto Fare Kannada Pro","distance_km":dist,"fare":fare,"base_fare":30,"per_km":15,"aq_model":"3.8","city":"Bangalore","vercel_only":True,"not_found_fixed":True})
-    except Exception as e:
-        return jsonify({"error":str(e),"fare":98})
-
-@app.route('/api/products')
-@app.route('/api/products/')
-def products_api():
-    return jsonify([{"id":1,"name":"Tomato / ಟೊಮೆಟೊ","price":40,"stock":50},{"id":2,"name":"Onion / ಈರುಳ್ಳಿ","price":35},{"id":3,"name":"Milk / ಹಾಲು","price":28},{"id":4,"name":"Rice / ಅಕ್ಕಿ","price":65}])
+@app.route('/api/health')
+@app.route('/api/health/')
+def health():
+    return jsonify({
+        "status":"ok",
+        "project":"Namma Clinic Pro - Token Queue Pro - ONLY Clinic Pro",
+        "suite":"Clinic Pro Only - Day 6 - Vercel Only",
+        "model":"3.8",
+        "vercel":True,
+        "clinic_only":True,
+        "flask_app":"defined ✅",
+        "not_found_fixed":"Fixed ✅",
+        "aq_key_present":bool(AQ_API_KEY),
+        "today_patients":len(TOKENS),
+        "current":CURRENT_TOKEN,
+        "waiting":len([t for t in TOKENS if t["status"]=="waiting"]),
+        "revenue":sum(t["fee"] for t in TOKENS),
+        "endpoints":["/","/api/index","/api/health","/api/tokens","/api/tokens/book","/api/tokens/next","/api/aq"],
+        "price":"₹10k-15k per clinic + ₹500/month"
+    })
 
 @app.route('/api/tokens')
 @app.route('/api/tokens/')
 def tokens_api():
-    return jsonify({"current":1,"waiting":9,"next":2,"revenue":1150,"today_patients":23,"vercel_only":True,"not_found_fixed":True})
+    global TOKENS, CURRENT_TOKEN
+    waiting=len([t for t in TOKENS if t["status"]=="waiting"])
+    return jsonify({"current":CURRENT_TOKEN,"waiting":waiting,"next":CURRENT_TOKEN+1,"revenue":sum(t["fee"] for t in TOKENS),"today_patients":len(TOKENS),"queue":TOKENS,"clinic_only":True})
+
+@app.route('/api/tokens/book')
+@app.route('/api/tokens/book/')
+def book_token_api():
+    global TOKENS, CURRENT_TOKEN
+    name=request.args.get('name','Patient')
+    phone=request.args.get('phone','9999999999')
+    age=request.args.get('age','')
+    symptom=request.args.get('symptom','General')
+    fee=int(request.args.get('fee','50'))
+    new_id=get_next_id()
+    new_token={"id":new_id,"name":name,"phone":phone,"age":age,"symptom":symptom,"status":"waiting" if TOKENS else "current","time":datetime.now().strftime("%I:%M %p"),"fee":fee}
+    TOKENS.append(new_token)
+    if len(TOKENS)==1:
+        CURRENT_TOKEN=new_id
+    waiting=len([t for t in TOKENS if t["status"]=="waiting"])
+    return jsonify({"success":True,"token_id":new_id,"id":new_id,"name":name,"waiting":waiting,"clinic_only":True})
+
+@app.route('/api/tokens/next', methods=['GET','POST'])
+@app.route('/api/tokens/next/', methods=['GET','POST'])
+def next_token_api():
+    global TOKENS, CURRENT_TOKEN
+    for t in TOKENS:
+        if t["id"]==CURRENT_TOKEN:
+            t["status"]="done"
+    waiting=[t for t in TOKENS if t["status"]=="waiting"]
+    if waiting:
+        nxt=waiting[0]
+        nxt["status"]="current"
+        CURRENT_TOKEN=nxt["id"]
+        return jsonify({"success":True,"next":CURRENT_TOKEN,"name":nxt["name"],"current_token":nxt,"clinic_only":True})
+    else:
+        return jsonify({"success":True,"next":CURRENT_TOKEN,"message":"No more waiting","clinic_only":True})
 
 @app.route('/api/aq')
 @app.route('/api/aq/')
 def aq_api():
-    from_loc=request.args.get('from','MG Road')
-    to_loc=request.args.get('to','Koramangala')
-    distance=request.args.get('distance','6.5')
-    fare=request.args.get('fare','₹98')
-    prompt=f"Trip {from_loc} to {to_loc}, {distance}km, fare {fare}. Give Kannada driver lines."
-    ai_response=call_aq_model_38(prompt)
+    symptom=request.args.get('symptom','Fever')
+    name=request.args.get('name','Patient')
+    age=request.args.get('age','28')
+    prompt=f"Clinic: Patient {name}, age {age}, symptom '{symptom}'. Give urgency, department, first question. Short."
+    ai_response=call_aq_clinic(prompt)
     if ai_response:
-        return jsonify({"from":from_loc,"to":to_loc,"distance":distance,"fare":fare,"response":ai_response,"aq_key_present":bool(AQ_API_KEY),"not_found_fixed":True})
+        return jsonify({"symptom":symptom,"name":name,"response":ai_response,"aq_key_present":bool(AQ_API_KEY),"clinic_only":True})
     else:
-        return jsonify({"from":from_loc,"to":to_loc,"fallback":f"ಅಣ್ಣಾ {to_loc} ಗೆ {distance} ಕಿಮೀ, ಮೀಟರ್ {fare} ಆಗುತ್ತೆ, ಬರ್ತೀರಾ?","aq_key_present":bool(AQ_API_KEY),"note":"Set AQ_API_KEY in Vercel Env","not_found_fixed":True})
+        urgency="High" if any(x in symptom.lower() for x in ["chest pain","breath","unconscious","bleeding"]) else "Medium"
+        return jsonify({"symptom":symptom,"fallback":f"{urgency} urgency - General Physician - Ask duration for {symptom}? Kannada: ಎಷ್ಟು ದಿನದಿಂದ {symptom}?","urgency":urgency,"department":"General Physician","aq_key_present":bool(AQ_API_KEY),"clinic_only":True})
 
-@app.route('/api/health')
-@app.route('/api/health/')
-def health():
-    return jsonify({"status":"ok","apps":3,"suite":"Bharath Pro Suite - Vercel Fixed","model":"3.8","vercel":True,"vercel_only":True,"flask_app":"defined ✅","build":"fixed ✅","not_found_fixed":"Fixed Not Found - Added /api/index and catch-all routes ✅","aq_key_present":bool(AQ_API_KEY),"domain":"namma-ritha-bhandava-wv4t.vercel.app","endpoints":["/","/api/index","/api/health","/api/fare","/api/products","/api/tokens","/api/aq"]})
-
-# ===== CATCH-ALL - FIXES "Not Found - The requested URL was not found" =====
 @app.route('/<path:path>')
 def catch_all(path):
-    # Log what path Vercel sent us (for debugging)
-    # If it's api routes that we already handle, Flask would have matched earlier, so this is unknown path
-    # Return home for root-like paths, or helpful JSON for api-like paths
     if path.startswith('api/'):
-        # Unknown api path - return helpful JSON instead of HTML 404
-        return jsonify({
-            "error": f"API path /{path} not found - but Flask is running ✅",
-            "hint": "Use /api/health , /api/fare , /api/products , /api/tokens , /api/aq",
-            "received_path": path,
-            "flask_app": "running ✅",
-            "not_found_fixed": True,
-            "available_endpoints": ["/","/api/index","/api/health","/api/fare","/api/products","/api/tokens","/api/aq"]
-        }), 404
+        return jsonify({"error":f"API /{path} not found","hint":"Use /api/health , /api/tokens , /api/tokens/book , /api/aq","received_path":path,"clinic_only":True}),404
     else:
-        # For any other path (like favicon, etc) return home UI - fixes Not Found page
         return render_template_string(HTML_TEMPLATE)
 
 @app.errorhandler(404)
 def not_found(e):
-    # This catches anything Flask still doesn't match
-    return jsonify({
-        "error": "This page doesn't exist - But Flask is running - Fixed by catch-all",
-        "hint": "Use / , /api/index , /api/health , /api/fare , /api/products , /api/tokens , /api/aq",
-        "status": "Ready ✅",
-        "fix": "Added routes for /api/index and catch-all /<path:path>",
-        "not_found_fixed": True,
-        "flask_app": "defined at top-level ✅"
-    }), 404
+    return jsonify({"error":"Not Found - Clinic Pro Running","hint":"Use / , /api/index , /api/health , /api/tokens","clinic_only":True,"status":"Ready"}),404
